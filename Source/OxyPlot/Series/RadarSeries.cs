@@ -19,7 +19,7 @@ namespace OxyPlot.Series
     /// Represents a series for radar chart.
     /// </summary>
     /// <remarks>The arc length/central angle/area of each slice is proportional to the quantity it represents.
-    public class RadarSeries : ItemsSeries
+    public class RadarSeries : Series
     {
         /// <summary>
         /// Gets or sets axis min value for all dimension
@@ -29,7 +29,7 @@ namespace OxyPlot.Series
         /// <summary>
         /// Gets or sets axis min value
         /// </summary>
-        public double AxisMinValue { get; set; }
+        public double? AxisMinValue { get; set; }
 
         /// <summary>
         /// Gets or sets axis max value for all dimension
@@ -39,7 +39,7 @@ namespace OxyPlot.Series
         /// <summary>
         /// Gets or sets axis min value
         /// </summary>
-        public double AxisMaxValue { get; set; }
+        public double? AxisMaxValue { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether 
@@ -76,17 +76,24 @@ namespace OxyPlot.Series
         public IList<RadarItem> Items { get; set; }
 
 
-
-
-
         private double radius;
 
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public RadarSeries()
+        {
+            Items = new List<RadarItem>();
+            IsDifferentAxisValue = false;
+            AxisStepCount = 0;
+        }
 
         /// <summary>
         /// Render gridline of radar chart
         /// </summary>
         /// <param name="rc">The rendering context.</param>
-        protected void RenderGridline(IRenderContext rc, ScreenPoint midPoint )
+        protected void RenderGridline(IRenderContext rc, ScreenPoint midPoint)
         {
             double currentRadius;
             double radiusStep;
@@ -105,7 +112,7 @@ namespace OxyPlot.Series
                 for (int dimension = 0; dimension < DimensionCount; dimension++, currentAngle += angleStep)
                 {
                     points[dimension] = new ScreenPoint(
-                        midPoint.X - currentRadius * Math.Sin(currentAngle),
+                        midPoint.X + currentRadius * Math.Sin(currentAngle),
                         midPoint.Y - currentRadius * Math.Cos(currentAngle)
                         );
                 }
@@ -123,12 +130,7 @@ namespace OxyPlot.Series
                 throw new ArgumentException(string.Format("Dimension count must be greater than 2, but you have {0} dimentions", DimensionCount));
 
 
-            AxisMinValue = 0;
-            AxisMaxValue = 10;
-
-
             // set size of graph, area is square
-            double heightMargin = 0;
             double heightGraph = PlotModel.PlotArea.Height;
             double radiusBigCircle, radiusSmallCircle;
             double angle = (2 * Math.PI / DimensionCount);
@@ -154,53 +156,157 @@ namespace OxyPlot.Series
                 (this.PlotModel.PlotArea.Top + this.PlotModel.PlotArea.Bottom) / 2);
 
 
+            // rendering
             RenderGridline(rc, midPoint);
             foreach (var item in Items)
                 if (IsDifferentAxisValue)
                     item.Render(rc, midPoint, radius, 0, 0);
                 else
-                    item.Render(rc, midPoint, radius, AxisMinValue, AxisMaxValue);
+                    item.Render(rc, midPoint, radius, AxisMinValue.Value, AxisMaxValue.Value);
 
         }
 
         public override void RenderLegend(IRenderContext rc, OxyRect legendBox)
         {
+            //TODO: write code
         }
 
+        /// <summary>
+        /// Sets the default values.
+        /// </summary>
+        protected internal override void SetDefaultValues()
+        {
+            if (Items != null && Items.Count > 0 && Items[0].Value != null)
+                DimensionCount = Items[0].Value.Count;
+
+            if (DimensionCount < 3)
+                DimensionCount = 3;
+
+
+            //TODO: write code
+        }
+
+        /// <summary>
+        /// Updates the maximum and minimum values of the axes used by this series.
+        /// </summary>
+        protected internal override void UpdateAxisMaxMin()
+        {
+            if (Items != null && Items.Count > 0)
+            {
+                // if axis value are different
+                if (IsDifferentAxisValue)
+                {
+                    if (AxisMinValues == null || AxisMaxValues == null)
+                    {
+                        List<double> min = new List<double>(DimensionCount);
+                        List<double> max = new List<double>(DimensionCount);
+
+                        for (int dimension = 0; dimension < DimensionCount; dimension++)
+                        {
+                            min[dimension] = max[dimension] = Items[0].Value[dimension];
+
+                            foreach (var item in Items)
+                                if (item.Value != null)
+                                {
+                                    if (item.Value[dimension] < min[dimension])
+                                        min[dimension] = item.Value[dimension];
+                                    else if (item.Value[dimension] > max[dimension])
+                                        max[dimension] = item.Value[dimension];
+                                }
+                        }
+                        if (AxisMinValues == null)
+                            AxisMinValues = min;
+
+                        if (AxisMaxValues == null)
+                            AxisMaxValues = max;
+
+                        // if all data are similar to each other
+                        for (int dimension = 0; dimension < DimensionCount; dimension++)
+                            if (AxisMaxValues[dimension] == AxisMinValues[dimension])
+                                AxisMaxValues[dimension] += 1;
+                    }
+                }
+
+                // if axis value are similar
+                else
+                {
+                    if (AxisMinValue == null || AxisMaxValue == null)
+                    {
+                        double min, max;
+                        min = max = Items[0].Value[0];
+
+                        foreach (var item in Items)
+                            foreach (var value in item.Value)
+                                if (value < min)
+                                    min = value;
+                                else if (value > max)
+                                    max = value;
+
+                        if (AxisMinValue == null)
+                            AxisMinValue = min;
+
+                        if (AxisMaxValue == null)
+                            AxisMaxValue = max;
+                    }
+
+                    // if all data are similar to each other
+                    if (AxisMaxValue == AxisMinValue)
+                        AxisMaxValue += 1;
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Updates the data.
+        /// </summary>
+        protected internal override void UpdateData()
+        {
+            // set dimension count
+            if (Items != null && Items[0].Value != null)
+                DimensionCount = Items[0].Value.Count;
+
+            //TODO: write code
+        }
+
+        /// <summary>
+        /// Updates the maximum and minimum values of the series.
+        /// </summary>
+        protected internal override void UpdateMaxMin()
+        {
+            //TODO: write code
+        }
+
+        /// <summary>
+        /// Updates the valid items
+        /// </summary>
+        protected internal override void UpdateValidData()
+        {}
+
+        /// <summary>
+        /// Checks if this data series requires X/Y axes. (e.g. RadarSeries does not require axes)
+        /// </summary>
+        /// <returns>True if no axes are required.</returns>
         protected internal override bool AreAxesRequired()
         {
             return false;
         }
 
+        /// <summary>
+        /// Ensures that the axes of the series is defined.
+        /// </summary>
         protected internal override void EnsureAxes()
-        {
-            //throw new NotImplementedException();
-        }
+        { }
 
+        /// <summary>
+        /// Check if the data series is using the specified axis.
+        /// </summary>
+        /// <param name="axis">An axis.</param>
+        /// <returns>True if the axis is in use.</returns>
         protected internal override bool IsUsing(Axis axis)
         {
+            //TODO: maybe change this
             return false;
-        }
-
-        protected internal override void SetDefaultValues()
-        {
-            //throw new NotImplementedException();
-        }
-
-        protected internal override void UpdateAxisMaxMin()
-        {
-
-           // throw new NotImplementedException();
-        }
-
-        protected internal override void UpdateData()
-        {
-            //throw new NotImplementedException();
-        }
-
-        protected internal override void UpdateMaxMin()
-        {
-            //throw new NotImplementedException();
         }
     }
 }

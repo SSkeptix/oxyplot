@@ -61,10 +61,36 @@ namespace OxyPlot.Series
             for (int dimension = 0; dimension < Value.Count; dimension++, currentAngle += angleStep)
             {
                 points[dimension] = new ScreenPoint(
-                    midPoint.X - radius * (Value[dimension] - axisMinValue) / (axisMaxValue - axisMinValue) * Math.Sin(currentAngle),
+                    midPoint.X + radius * (Value[dimension] - axisMinValue) / (axisMaxValue - axisMinValue) * Math.Sin(currentAngle),
                     midPoint.Y - radius * (Value[dimension] - axisMinValue) / (axisMaxValue - axisMinValue) * Math.Cos(currentAngle)
                     );
             }
+            //TODO: add polygon fill color
+            rc.DrawPolygon(points, OxyColors.Automatic, ChartStrokeColor, ChartStrokeThickness);
+        }
+
+        /// <summary>
+        /// Render chart line of item
+        /// </summary>
+        /// <param name="rc">The rendering context.</param>
+        /// <param name="midPoint">The chart center position</param>
+        /// <param name="radius">The radius of chart</param>
+        internal void Render(IRenderContext rc, ScreenPoint midPoint, double radius, IList<double> axisMinValues, IList<double> axisMaxValues)
+        {
+            double currentAngle = 0;
+            double angleStep = 2 * Math.PI / Value.Count;
+
+            ScreenPoint[] points = new ScreenPoint[Value.Count];
+
+            // calculate vertex of chart polygon
+            for (int dimension = 0; dimension < Value.Count; dimension++, currentAngle += angleStep)
+            {
+                points[dimension] = new ScreenPoint(
+                    midPoint.X - radius * (Value[dimension] - axisMinValues[dimension]) / (axisMaxValues[dimension] - axisMinValues[dimension]) * Math.Sin(currentAngle),
+                    midPoint.Y - radius * (Value[dimension] - axisMinValues[dimension]) / (axisMaxValues[dimension] - axisMinValues[dimension]) * Math.Cos(currentAngle)
+                    );
+            }
+            //TODO: add polygon fill color
             rc.DrawPolygon(points, OxyColors.Automatic, ChartStrokeColor, ChartStrokeThickness);
         }
     }

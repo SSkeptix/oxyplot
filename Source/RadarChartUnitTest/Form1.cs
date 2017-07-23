@@ -24,7 +24,7 @@
                 AxisStepCount = 10,
             };
             var i = new RadarItem {
-                Value = new List<double>(new[] { 4, 3.2, 8, 9, 9, 5 }),
+                Value = new List<double>(new[] { 4, 3.2, 8, 9, 9, 5, 0, 10 }),
                 ChartStrokeColor = OxyColors.Black,
                 ChartStrokeThickness = 1,
             };
